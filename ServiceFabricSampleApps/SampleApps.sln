@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StatelessWebApp", "Stateles
 EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "TestApp", "TestApp\TestApp.sfproj", "{D268DE68-65FB-4EAC-B16E-86D4B36DAEC8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Web", "Web\Web.csproj", "{20F31B67-92B8-412D-8F19-179E94D9A524}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Web", "Web\Web.csproj", "{20F31B67-92B8-412D-8F19-179E94D9A524}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

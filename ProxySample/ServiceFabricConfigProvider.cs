@@ -83,21 +83,28 @@ namespace Microsoft.ReverseProxy.Configuration.ServiceFabric
 
         public static async Task Update()
         {
+
             try
             {
                 var routes = new ConcurrentBag<ProxyRoute>();
                 var clusters = new ConcurrentBag<Cluster>();
 
-                var apps = await _fabricClient.QueryManager.GetApplicationListAsync();
-
+                ApplicationList apps = null;
                 do
                 {
+                    apps = await _fabricClient.QueryManager.GetApplicationPagedListAsync(new System.Fabric.Description.ApplicationQueryDescription()
+                    {
+                        MaxResults = Int32.MaxValue
+                    });
+
                     await apps.AsyncParallelForEach(async app =>
                     {
-                        var services = await _fabricClient.QueryManager.GetServiceListAsync(app.ApplicationName);
+                        ServiceList services = null; 
 
                         do
                         {
+                            services = await _fabricClient.QueryManager.GetServicePagedListAsync(new System.Fabric.Description.ServiceQueryDescription(app.ApplicationName) { MaxResults = Int32.MaxValue });
+
                             await services.AsyncParallelForEach(async service =>
                             {
                                 var cluster = new Cluster();
@@ -112,9 +119,7 @@ namespace Microsoft.ReverseProxy.Configuration.ServiceFabric
                                     route.ClusterId = serviceName;
                                     route.Match.Path = serviceName + "/{**catch-all}";
                                     route.Transforms = new List<IDictionary<string, string>>();
-                                    route.Transforms.Add(new Dictionary<string, string>() {
-                                    {"PathRemovePrefix", serviceName }
-                                        });
+                                    route.AddTransformPathRemovePrefix(new AspNetCore.Http.PathString("/" + serviceName));
                                     route.AddTransformRequestHeader("X-Forwarded-PathBase", "/" + serviceName);
 
                                     routes.Add(route);
@@ -125,25 +130,33 @@ namespace Microsoft.ReverseProxy.Configuration.ServiceFabric
                                     route.ClusterId = serviceName;
                                     route.Match.Path = serviceName;
                                     route.Transforms = new List<IDictionary<string, string>>();
-                                    route.Transforms.Add(new Dictionary<string, string>() {
-                                    {"PathRemovePrefix", serviceName }
-                                        });
+                                    route.AddTransformPathRemovePrefix(new AspNetCore.Http.PathString("/" + serviceName));
                                     route.AddTransformRequestHeader("X-Forwarded-PathBase", "/" + serviceName);
                                     routes.Add(route);
                                 }
 
-                                var partitions = await _fabricClient.QueryManager.GetPartitionListAsync(service.ServiceName);
+                                ServicePartitionList partitions = null;
+
                                 do
                                 {
+                                    partitions = partitions == null ?
+                                        await _fabricClient.QueryManager.GetPartitionListAsync(service.ServiceName) :
+                                        await _fabricClient.QueryManager.GetPartitionListAsync(app.ApplicationName, services.ContinuationToken);
+                               
                                     await partitions.AsyncParallelForEach(async partition =>
                                     {
-                                        var partitionId = partition.PartitionInformation.Id;
-                                        var replicas = await _fabricClient.QueryManager.GetReplicaListAsync(partitionId);
+                                        var partitionId = partition.PartitionInformation.Id;                                        
+                                        ServiceReplicaList replicas = null;
+
                                         do
                                         {
+                                            replicas = replicas == null ?
+                                                await _fabricClient.QueryManager.GetReplicaListAsync(partitionId) :
+                                                await _fabricClient.QueryManager.GetReplicaListAsync(partitionId, services.ContinuationToken);
+
                                             await replicas.AsyncParallelForEach(async replica =>
                                             {
-                                                var endpointSet = System.Text.Json.JsonSerializer.Deserialize<ReplicaAddress>(replica.ReplicaAddress);
+                                                var endpointSet = JsonSerializer.Deserialize<ReplicaAddress>(replica.ReplicaAddress);
                                                 foreach (var endpoint in endpointSet.Endpoints)
                                                 {
                                                     var destination = new Destination();

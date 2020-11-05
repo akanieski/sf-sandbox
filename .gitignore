@@ -3,3 +3,5 @@ reverse-proxy
 **/obj
 **/packages
 **/pkg
+**/.suo
+**/.vs

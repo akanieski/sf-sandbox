@@ -31,18 +31,11 @@ namespace StatelessWebApp
         {
             
             app.Use(async (context, next) => {
-                try
+                if (context.Request.Headers.ContainsKey("X-Forwarded-PathBase"))
                 {
-                    if (context.Request.Headers.ContainsKey("X-Forwarded-PathBase"))
-                    {
-                        Microsoft.Extensions.Primitives.StringValues path;
-                        context.Request.Headers.TryGetValue("X-Forwarded-PathBase", out path);
-                        context.Request.PathBase = path.FirstOrDefault();
-                    }
-                }
-                catch(Exception ex)
-                {
-                    System.IO.File.AppendAllTextAsync(@"c:\src\log.txt", ex.ToString() + Environment.NewLine);
+                    Microsoft.Extensions.Primitives.StringValues path;
+                    context.Request.Headers.TryGetValue("X-Forwarded-PathBase", out path);
+                    context.Request.PathBase = path.FirstOrDefault();
                 }
                 await next();
             });
