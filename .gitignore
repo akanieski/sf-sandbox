@@ -1,0 +1,5 @@
+reverse-proxy
+**/bin
+**/obj
+**/packages
+**/pkg
